@@ -3,7 +3,8 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "${env:PICO_SDK_PATH}/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",
