@@ -15,13 +15,27 @@ RUN if [ "${REINSTALL_CMAKE_VERSION_FROM_SOURCE}" != "none" ]; then \
 
 # [Optional] Uncomment this section to install additional packages.
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib libusb-1.0-0-dev
+    && apt-get -y install --no-install-recommends gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib libusb-1.0-0-dev automake autoconf build-essential texinfo libtool libftdi-dev
 
 # Raspberry Pi Pico SDK
 ARG SDK_PATH=/usr/share/pico_sdk
 RUN git clone --depth 1 --branch 1.5.0 https://github.com/raspberrypi/pico-sdk $SDK_PATH && \
     cd $SDK_PATH && \
     git submodule update --init
+
+# Setup picoprobe
+ARG PROBE_ROOT=/usr/share/pico
+RUN git clone --depth=1 --branch picoprobe --no-single-branch https://github.com/raspberrypi/openocd.git $PROBE_ROOT && \
+    cd "$PROBE_ROOT/openocd" && \
+    ./bootstrap && \
+    ./configure --enable-picoprobe && \
+    make -j4
+
+RUN git clone --depth=1 --recurse-submodules https://github.com/raspberrypi/picoprobe.git $PROBE_ROOT && \
+    mkdir "$PROBE_ROOT/picoprobe/build" build && \
+    cd "$PROBE_ROOT/picoprobe/build" && \
+    cmake -G “Unix Makefiles” .. && \
+    make
 
 ENV PICO_SDK_PATH=$SDK_PATH
 

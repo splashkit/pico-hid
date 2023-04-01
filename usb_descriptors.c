@@ -23,7 +23,9 @@
  *
  */
 
-#include "tusb.h"
+#include "pico_hid.h"
+
+#ifndef JUST_STDIO
 #include "usb_descriptors.h"
 
 /* A combination of interfaces must have a unique product id, since PC will save device driver after the first plug.
@@ -36,7 +38,7 @@
 #define USB_PID           (0x4000 | _PID_MAP(CDC, 0) | _PID_MAP(MSC, 1) | _PID_MAP(HID, 2) | \
                            _PID_MAP(MIDI, 3) | _PID_MAP(VENDOR, 4) )
 
-#define USB_VID   0xCafe
+#define USB_VID   0xAce9
 #define USB_BCD   0x0200
 
 //--------------------------------------------------------------------+
@@ -76,9 +78,7 @@ uint8_t const * tud_descriptor_device_cb(void)
 
 uint8_t const desc_hid_report[] =
 {
-  TUD_HID_REPORT_DESC_KEYBOARD( HID_REPORT_ID(REPORT_ID_KEYBOARD         )),
-  TUD_HID_REPORT_DESC_MOUSE   ( HID_REPORT_ID(REPORT_ID_MOUSE            )),
-  TUD_HID_REPORT_DESC_CONSUMER( HID_REPORT_ID(REPORT_ID_CONSUMER_CONTROL )),
+  // TUD_HID_REPORT_DESC_CONSUMER( HID_REPORT_ID(REPORT_ID_CONSUMER_CONTROL )),
   TUD_HID_REPORT_DESC_GAMEPAD ( HID_REPORT_ID(REPORT_ID_GAMEPAD          ))
 };
 
@@ -225,3 +225,4 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 
   return _desc_str;
 }
+#endif

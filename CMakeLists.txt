@@ -25,9 +25,13 @@ add_compile_options(-Wall
 
 add_executable(pico_hid)
 
+pico_enable_stdio_usb(pico_hid 0)
+pico_enable_stdio_uart(pico_hid 1)
+
 target_sources(pico_hid PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/main.c
         ${CMAKE_CURRENT_LIST_DIR}/usb_descriptors.c
+        ${CMAKE_CURRENT_LIST_DIR}/pico_hid.c
         )
 
 # Make sure TinyUSB can find tusb_config.h

@@ -10,6 +10,16 @@
 			"installTools": true,
 			"version": "latest"
 		}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"marus25.cortex-debug",
+				"ms-vscode.cpptools",
+				"twxs.cmake",
+				"josetr.cmake-language-support-vscode"
+			]
+		}
 	}
 
 	// Features to add to the dev container. More info: https://containers.dev/features.

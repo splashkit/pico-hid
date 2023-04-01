@@ -27,10 +27,17 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "bsp/board.h"
-#include "tusb.h"
+#include <pico/stdlib.h>
 
+#include "pico_hid.h"
+
+#ifndef JUST_STDIO
+
+#include "bsp/board.h"
 #include "usb_descriptors.h"
+
+#endif
+
 
 //--------------------------------------------------------------------+
 // MACRO CONSTANT TYPEDEF PROTYPES
@@ -55,15 +62,39 @@ void hid_task(void);
 /*------------- MAIN -------------*/
 int main(void)
 {
+  #ifndef JUST_STDIO
   board_init();
   tusb_init();
+  #else
+  stdio_init_all();
+  printf("Starting up");
+  #endif
+
+  setup_controller_buttons();
 
   while (1)
   {
+    #ifndef JUST_STDIO
     tud_task(); // tinyusb device task
     led_blinking_task();
-
     hid_task();
+    #else
+
+    hid_gamepad_report_t report =
+      {
+        .x   = 0, // left analog
+        .y   = 0, // left analog
+        .z   = 0, // right analog
+        .rz  = 0, // right analog
+        .rx  = 0, // left analog trigger
+        .ry  = 0, // right analog trigger
+        .hat = 0, // mask for dpad/hat (8 bit)
+        .buttons = 0 // mask for buttons (32 bit)
+      };
+    update_hid_report_controller(&report);
+    printf("hat: %d buttons: %d\n", report.hat, report.buttons);
+
+    #endif
   }
 
   return 0;
@@ -104,6 +135,8 @@ void tud_resume_cb(void)
 // USB HID
 //--------------------------------------------------------------------+
 
+#ifndef JUST_STDIO
+
 static void send_hid_report(uint8_t report_id, uint32_t btn)
 {
   // skip if hid is not ready yet
@@ -111,56 +144,26 @@ static void send_hid_report(uint8_t report_id, uint32_t btn)
 
   switch(report_id)
   {
-    case REPORT_ID_KEYBOARD:
-    {
-      // use to avoid send multiple consecutive zero report for keyboard
-      static bool has_keyboard_key = false;
+    // case REPORT_ID_CONSUMER_CONTROL:
+    // {
+    //   // use to avoid send multiple consecutive zero report
+    //   static bool has_consumer_key = false;
 
-      if ( btn )
-      {
-        uint8_t keycode[6] = { 0 };
-        keycode[0] = HID_KEY_A;
-
-        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, keycode);
-        has_keyboard_key = true;
-      }else
-      {
-        // send empty key report if previously has key pressed
-        if (has_keyboard_key) tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);
-        has_keyboard_key = false;
-      }
-    }
-    break;
-
-    case REPORT_ID_MOUSE:
-    {
-      int8_t const delta = 5;
-
-      // no button, right + down, no scroll, no pan
-      tud_hid_mouse_report(REPORT_ID_MOUSE, 0x00, delta, delta, 0, 0);
-    }
-    break;
-
-    case REPORT_ID_CONSUMER_CONTROL:
-    {
-      // use to avoid send multiple consecutive zero report
-      static bool has_consumer_key = false;
-
-      if ( btn )
-      {
-        // volume down
-        uint16_t volume_down = HID_USAGE_CONSUMER_VOLUME_DECREMENT;
-        tud_hid_report(REPORT_ID_CONSUMER_CONTROL, &volume_down, 2);
-        has_consumer_key = true;
-      }else
-      {
-        // send empty key report (release key) if previously has key pressed
-        uint16_t empty_key = 0;
-        if (has_consumer_key) tud_hid_report(REPORT_ID_CONSUMER_CONTROL, &empty_key, 2);
-        has_consumer_key = false;
-      }
-    }
-    break;
+    //   if ( btn )
+    //   {
+    //     // volume down
+    //     uint16_t volume_down = HID_USAGE_CONSUMER_VOLUME_DECREMENT;
+    //     tud_hid_report(REPORT_ID_CONSUMER_CONTROL, &volume_down, 2);
+    //     has_consumer_key = true;
+    //   }else
+    //   {
+    //     // send empty key report (release key) if previously has key pressed
+    //     uint16_t empty_key = 0;
+    //     if (has_consumer_key) tud_hid_report(REPORT_ID_CONSUMER_CONTROL, &empty_key, 2);
+    //     has_consumer_key = false;
+    //   }
+    // }
+    // break;
 
     case REPORT_ID_GAMEPAD:
     {
@@ -169,21 +172,25 @@ static void send_hid_report(uint8_t report_id, uint32_t btn)
 
       hid_gamepad_report_t report =
       {
-        .x   = 0, .y = 0, .z = 0, .rz = 0, .rx = 0, .ry = 0,
-        .hat = 0, .buttons = 0
+        .x   = 0, // left analog
+        .y   = 0, // left analog
+        .z   = 0, // right analog
+        .rz  = 0, // right analog
+        .rx  = 0, // left analog trigger
+        .ry  = 0, // right analog trigger
+        .hat = 0, // mask for dpad/hat (8 bit)
+        .buttons = 0 // mask for buttons (32 bit)
       };
 
-      if ( btn )
-      {
-        report.hat = GAMEPAD_HAT_UP;
-        report.buttons = GAMEPAD_BUTTON_A;
-        tud_hid_report(REPORT_ID_GAMEPAD, &report, sizeof(report));
+      update_hid_report_controller(&report);
 
-        has_gamepad_key = true;
-      }else
+      if ( ! is_empty(&report) )
       {
-        report.hat = GAMEPAD_HAT_CENTERED;
-        report.buttons = 0;
+        tud_hid_report(REPORT_ID_GAMEPAD, &report, sizeof(report));
+        has_gamepad_key = true;
+      }
+      else
+      {
         if (has_gamepad_key) tud_hid_report(REPORT_ID_GAMEPAD, &report, sizeof(report));
         has_gamepad_key = false;
       }
@@ -216,7 +223,7 @@ void hid_task(void)
   }else
   {
     // Send the 1st of report chain, the rest will be sent by tud_hid_report_complete_cb()
-    send_hid_report(REPORT_ID_KEYBOARD, btn);
+    send_hid_report(REPORT_ID_GAMEPAD, btn);
   }
 }
 
@@ -255,31 +262,6 @@ uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_t
 // received data on OUT endpoint ( Report ID = 0, Type = 0 )
 void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t const* buffer, uint16_t bufsize)
 {
-  (void) instance;
-
-  if (report_type == HID_REPORT_TYPE_OUTPUT)
-  {
-    // Set keyboard LED e.g Capslock, Numlock etc...
-    if (report_id == REPORT_ID_KEYBOARD)
-    {
-      // bufsize should be (at least) 1
-      if ( bufsize < 1 ) return;
-
-      uint8_t const kbd_leds = buffer[0];
-
-      if (kbd_leds & KEYBOARD_LED_CAPSLOCK)
-      {
-        // Capslock On: disable blink, turn led on
-        blink_interval_ms = 0;
-        board_led_write(true);
-      }else
-      {
-        // Caplocks Off: back to normal blink
-        board_led_write(false);
-        blink_interval_ms = BLINK_MOUNTED;
-      }
-    }
-  }
 }
 
 //--------------------------------------------------------------------+
@@ -300,3 +282,5 @@ void led_blinking_task(void)
   board_led_write(led_state);
   led_state = 1 - led_state; // toggle
 }
+
+#endif
