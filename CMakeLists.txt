@@ -32,6 +32,7 @@ target_sources(pico_hid PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/main.c
         ${CMAKE_CURRENT_LIST_DIR}/usb_descriptors.c
         ${CMAKE_CURRENT_LIST_DIR}/pico_hid.c
+        ${CMAKE_CURRENT_LIST_DIR}/pcf8591_adc.c
         )
 
 # Make sure TinyUSB can find tusb_config.h

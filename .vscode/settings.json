@@ -1,8 +1,9 @@
 {
   "files.associations": {
     "usb_descriptors.h": "c",
-    "pico_hid.h": "c"
-  },
+    "pico_hid.h": "c",
+    "pcf8591_adc.h": "c"
+},
 
   // These settings tweaks to the cmake plugin will ensure
   // that you debug using cortex-debug instead of trying to launch
