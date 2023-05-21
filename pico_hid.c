@@ -78,7 +78,7 @@ const button_data _button_config[] = {
 */
 static joystick_adc_map_t joy_map[] = {
   {
-    .read_from_adc = 1, // lx
+    .read_from_adc = 2, // lx
     .invert = false,
     .raw_adc = 0,
     .value = 0
@@ -90,7 +90,7 @@ static joystick_adc_map_t joy_map[] = {
     .value = 0
   },
   {
-    .read_from_adc = 2, // rx
+    .read_from_adc = 1, // rx
     .invert = false,
     .raw_adc = 0,
     .value = 0
