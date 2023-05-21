@@ -119,8 +119,7 @@ void read_joysticks(i2c_inst_t *i2c, joystick_adc_map_t *in_out)
 {
   uint8_t data[4] = {127,127,127,127};
 
-  int bytes_read = read_all_adc(i2c, data);
-
+  read_all_adc(i2c, data);
   
   for(int i = 0; i < 4; i++)
   {

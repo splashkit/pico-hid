@@ -1,5 +1,6 @@
 #include "pico/stdlib.h"
 
+#include "pcf8591_adc.h"
 #include "pico_hid.h"
 
 typedef enum {
@@ -55,31 +56,74 @@ const button_data _button_config[] = {
     SRC_DPAD, {
       .dpad_src = {
         {
-          3, // Up
-          2, // Right
-          16, // Down
-          17 // Left
+          18, // Up
+          19, // Right
+          17, // Down
+          16 // Left
         }
       }
     }
   },
   { SRC_BUTTON, { .button_src = { GAMEPAD_BUTTON_SOUTH, 7 } } },
-  { SRC_BUTTON, { .button_src = { GAMEPAD_BUTTON_EAST, 4 } } },
+  { SRC_BUTTON, { .button_src = { GAMEPAD_BUTTON_EAST, 8 } } },
   { SRC_BUTTON, { .button_src = { GAMEPAD_BUTTON_NORTH, 5 } } },
   { SRC_BUTTON, { .button_src = { GAMEPAD_BUTTON_WEST, 6 } } },
-  { SRC_BUTTON, { .button_src = { GAMEPAD_BUTTON_SELECT, 8 } } },
-  { SRC_BUTTON, { .button_src = { GAMEPAD_BUTTON_START, 9 } } },
-  { SRC_BUTTON, { .button_src = { GAMEPAD_BUTTON_MODE, 10 } } },
-  { SRC_ADC, { .adc_src = { ADC_LEFT_JOY_Y, 0 } } },
-  { SRC_ADC, { .adc_src = { ADC_LEFT_JOY_X, 1 } } },
-  { SRC_ADC, { .adc_src = { ADC_RIGHT_JOY_Y, 2 } } },
-  { SRC_ADC, { .adc_src = { ADC_RIGHT_JOY_X, 3 } } }
+  { SRC_BUTTON, { .button_src = { GAMEPAD_BUTTON_MODE, 9 } } },
+  { SRC_BUTTON, { .button_src = { GAMEPAD_BUTTON_SELECT, 22 } } },
+  { SRC_BUTTON, { .button_src = { GAMEPAD_BUTTON_START, 26 } } }
+};
+
+/**
+ * Mapping for ADC values - lx, ly, rx, ry
+*/
+static joystick_adc_map_t joy_map[] = {
+  {
+    .read_from_adc = 1, // lx
+    .invert = false,
+    .raw_adc = 0,
+    .value = 0
+  },
+  {
+    .read_from_adc = 3, // ly
+    .invert = true,
+    .raw_adc = 0,
+    .value = 0
+  },
+  {
+    .read_from_adc = 2, // rx
+    .invert = false,
+    .raw_adc = 0,
+    .value = 0
+  },
+  {
+    .read_from_adc = 0, // ry
+    .invert = false,
+    .raw_adc = 0,
+    .value = 0
+  }
 };
 
 const int _button_config_count = 8;
 
+// Pins
+const uint sda_pin = 20;
+const uint scl_pin = 21;
+
 void setup_controller_buttons(void)
 {
+  printf("Finding pcf8591\r\n");
+  // Find pcf8591
+  bool found = setup_pcf8591(i2c0, sda_pin, scl_pin);
+  int tries = 0;
+
+  while (!found && tries++ < 10)
+  {
+    printf("Retry\r\n");
+    sleep_ms(100);
+    found = setup_pcf8591(i2c0, sda_pin, scl_pin);
+  }
+  printf("Found: %d\r\n", found);
+  
   for (int i = 0; i < _button_config_count; i++ )
   {
     if ( _button_config[i].source == SRC_DPAD )
@@ -91,7 +135,7 @@ void setup_controller_buttons(void)
         gpio_pull_up(_button_config[i].data.dpad_src.gpio_pin[j]);
       }
     }
-    else
+    else if (_button_config[i].source == SRC_BUTTON)
     {
       gpio_init(_button_config[i].data.button_src.gpio_pin);
       gpio_set_dir(_button_config[i].data.button_src.gpio_pin, GPIO_IN);
@@ -135,14 +179,6 @@ void update_button(hid_gamepad_report_t *report, const button_source *data)
   }
 }
 
-// I2C address
-// static const uint8_t PCF8591_ADDR = (0x90 >> 1);
-
-
-void update_adc_input(hid_gamepad_report_t *report, const adc_source *data)
-{
-}
-
 /**
  * Setup the list of buttons to be read, and what they map to.
 */
@@ -159,4 +195,12 @@ void update_hid_report_controller(hid_gamepad_report_t *report)
       update_button(report, &_button_config[i].data.button_src);
     }
   }
+
+  // Read all ADC values into joy_map
+  read_joysticks(i2c0, joy_map);
+
+  report->x = joy_map[0].value;
+  report->y = joy_map[1].value;
+  report->rx = joy_map[2].value;
+  report->ry = joy_map[3].value;
 }

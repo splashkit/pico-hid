@@ -9,7 +9,7 @@
           "type": "cortex-debug",
           "servertype": "openocd",
           // This may need to be arm-none-eabi-gdb depending on your system
-          "gdbPath" : "arm-none-eabi-gdb",
+          "gdbPath" : "gdb",
           "device": "RP2040",
           "configFiles": [
               "interface/picoprobe.cfg",
@@ -22,7 +22,10 @@
               "break main",
               "continue"
           ],
-          "searchDir": ["/usr/share/pico/openocd/tcl"],
+          "searchDir": [
+            "/home/pi/pico/openocd/tcl",
+            "/usr/share/pico/openocd/tcl"
+        ],
       }
   ]
 }
